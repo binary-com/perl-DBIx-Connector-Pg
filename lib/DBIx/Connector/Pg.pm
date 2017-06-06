@@ -38,7 +38,8 @@ sub _fixup_run {
     if ($err) {    warn "here";
                    use Data::Dumper;
                    warn Dumper($err);
-        die $err if $self->connected;
+        die $err unless $err =~ /terminating connection due to administrator command/;
+        #die $err if $self->connected;
         # Not connected. Try again.
         return _exec($self->_connect, $code, $wantarray, @_);
     }
