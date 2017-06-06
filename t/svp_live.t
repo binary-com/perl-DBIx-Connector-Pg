@@ -12,11 +12,13 @@ if (exists $ENV{DBICTEST_DSN}) {
     ($dsn, $user, $pass) = @ENV{map { "DBICTEST_${_}" } qw/DSN USER PASS/};
     my $driver = (DBI->parse_dsn($dsn))[1];
     if ($driver eq 'Pg') {
-        @table_sql = (q{
+        @table_sql = (
+            q{
             SET client_min_messages = warning;
             DROP TABLE IF EXISTS artist;
             CREATE TABLE artist (id serial PRIMARY KEY, name TEXT);
-        });
+        }
+        );
     } elsif ($driver eq 'SQLite') {
         @table_sql = (
             'DROP TABLE IF EXISTS artist',
@@ -25,16 +27,15 @@ if (exists $ENV{DBICTEST_DSN}) {
              )},
         );
     } elsif ($driver eq 'Firebird') {
-        @table_sql = (
-            q{RECREATE TABLE artist (id INTEGER, name VARCHAR(100))},
-        );
+        @table_sql = (q{RECREATE TABLE artist (id INTEGER, name VARCHAR(100))},);
     } elsif ($driver eq 'mysql') {
         @table_sql = (
-             'DROP TABLE IF EXISTS artist;',
-             q{CREATE TABLE artist (
+            'DROP TABLE IF EXISTS artist;',
+            q{CREATE TABLE artist (
                  id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, name TEXT
              ) ENGINE=InnoDB;
-        });
+        }
+        );
     } else {
         plan skip_all => 'Set DBICTEST_DSN _USER and _PASS to run savepoint tests';
     }
@@ -44,18 +45,19 @@ if (exists $ENV{DBICTEST_DSN}) {
 
 plan tests => 38;
 
-ok my $conn = DBIx::Connector::Pg->new($dsn, $user, $pass, {
-    PrintError => 0,
-    RaiseError => 1,
-}), 'Get a connection';
+ok my $conn = DBIx::Connector::Pg->new(
+    $dsn, $user, $pass,
+    {
+        PrintError => 0,
+        RaiseError => 1,
+    }
+    ),
+    'Get a connection';
 diag "Connecting to $dsn";
 ok my $dbh = $conn->dbh, 'Get the database handle';
 isa_ok $dbh, 'DBI::db', 'The handle';
 
-$dbh->do($_) for (
-    @table_sql,
-    "INSERT INTO artist (id, name) VALUES(1, 'foo')",
-);
+$dbh->do($_) for (@table_sql, "INSERT INTO artist (id, name) VALUES(1, 'foo')",);
 
 pass 'Table created';
 
@@ -118,56 +120,54 @@ is $dbh->selectrow_array($sel), 'foo', 'Name should be "foo" once more';
 ok $dbh->commit, 'Commit the changes';
 
 # And now to see if svp will behave correctly
-$conn->svp (sub {
-    $conn->txn( fixup => sub { $upd->execute('Muff') });
+$conn->svp(
+    sub {
+        $conn->txn(fixup => sub { $upd->execute('Muff') });
 
-    eval {
-        $conn->svp(sub {
-            $upd->execute('Moff');
-            is $dbh->selectrow_array($sel), 'Moff', 'Name should be "Moff" in nested transaction';
-            shift->do('SELECT gack from artist');
-        });
-    };
-    ok $@,'Nested transaction failed (good)';
-    is $dbh->selectrow_array($sel), 'Muff', 'Rolled back name should be "Muff"';
-    $upd->execute('Miff');
-});
+        eval {
+            $conn->svp(
+                sub {
+                    $upd->execute('Moff');
+                    is $dbh->selectrow_array($sel), 'Moff', 'Name should be "Moff" in nested transaction';
+                    shift->do('SELECT gack from artist');
+                });
+        };
+        ok $@, 'Nested transaction failed (good)';
+        is $dbh->selectrow_array($sel), 'Muff', 'Rolled back name should be "Muff"';
+        $upd->execute('Miff');
+    });
 
 is $dbh->selectrow_array($sel), 'Miff', 'Savepoint worked: name is "Muff"';
 
-$conn->txn(fixup => sub {
-  my ($dbh) = @_;
-  $dbh->do("DELETE FROM artist;");
-  $dbh->do("INSERT INTO artist (name) VALUES ('All-Time Quarterback');");
+$conn->txn(
+    fixup => sub {
+        my ($dbh) = @_;
+        $dbh->do("DELETE FROM artist;");
+        $dbh->do("INSERT INTO artist (name) VALUES ('All-Time Quarterback');");
 
-  my $token = \do { my $x = "TURN IT OFF" };
+        my $token = \do { my $x = "TURN IT OFF" };
 
-  my $ok = eval {
-    $conn->svp(sub {
-      my ($dbh) = @_;
-      $dbh->do("INSERT INTO artist (name) VALUES ('Britney Spears');");
-      die $token;
+        my $ok = eval {
+            $conn->svp(
+                sub {
+                    my ($dbh) = @_;
+                    $dbh->do("INSERT INTO artist (name) VALUES ('Britney Spears');");
+                    die $token;
+                });
+            1;
+        };
+        my $error = $@;
+
+        ok(!$ok, "we didn't survive our svp");
+        ok((ref $error && ref $error eq 'SCALAR' && $error == $token), "we got the expected error, too") or diag "got error: $error";
+
+        $dbh->do("INSERT INTO artist (name) VALUES ('Cyndi Lauper');");
     });
-    1;
-  };
-  my $error = $@;
 
-  ok( ! $ok, "we didn't survive our svp");
-  ok(
-    (ref $error  && ref $error eq 'SCALAR' && $error == $token),
-    "we got the expected error, too"
-  ) or diag "got error: $error";
-
-  $dbh->do("INSERT INTO artist (name) VALUES ('Cyndi Lauper');");
-});
-
-$conn->txn(sub {
-  my ($dbh) = @_;
-  my $rows = $dbh->selectcol_arrayref("SELECT name FROM artist ORDER BY name");
-  is(@$rows, 2, "we inserted 2 rows");
-  is_deeply(
-    $rows,
-    [ 'All-Time Quarterback', 'Cyndi Lauper' ],
-    "...and we omitted the bad one",
-  );
-});
+$conn->txn(
+    sub {
+        my ($dbh) = @_;
+        my $rows = $dbh->selectcol_arrayref("SELECT name FROM artist ORDER BY name");
+        is(@$rows, 2, "we inserted 2 rows");
+        is_deeply($rows, ['All-Time Quarterback', 'Cyndi Lauper'], "...and we omitted the bad one",);
+    });
