@@ -11,10 +11,8 @@ sub connected {
     my $self = shift;
     return unless $self->_seems_connected;
     my $dbh = $self->{_dbh} or return;
-    $dbh->state and $dbh->state =~ /^08|^57/ and return;
+    $dbh->state and $dbh->state =~ /^08|^57(?!014)/ and return;
     return 1;
-    #dbh->state and $dbh->state =~ /^BI/ and return 1;
-    #return $self->driver->ping($dbh);
 }
 
 =head1 NAME
