@@ -5,6 +5,7 @@ requires 'DBD::Pg';
 on test => sub {
     requires 'Test::More', '>= 0.98';
     requires 'Test::PostgreSQL';
+    requires 'Test::Exception';
 };
 
 on develop => sub {
