@@ -19,7 +19,7 @@ sub connected {
 
 =head1 NAME
 
-DBIx::Connector::Pg - Module abstract
+DBIx::Connector::Pg - DBIx::Connector subclass to check connection error instead of ping
 
 =head1 SYNOPSIS
 
@@ -49,6 +49,8 @@ the same terms as the Perl 5 programming language system itself.
 
 
 =head1 SEE ALSO
+
+L<DBIx::Connector>
 
 =over 4
 
