@@ -2,7 +2,6 @@
 
 use strict;
 use warnings;
-#use Test::More tests => 49;
 use Test::More;
 use Test::MockModule;
 use Test::PostgreSQL;
@@ -24,14 +23,13 @@ $conn->run(
         $_->do(<<'SQL');
 CREATE OR REPLACE FUNCTION f_exec(text)
   RETURNS void LANGUAGE plpgsql AS
-$BODY$ 
-BEGIN 
+$BODY$
+BEGIN
    RAISE EXCEPTION using message='test_error', errcode='BI999';
 END;
 $BODY$;
 SQL
     });
-diag($pgsql->dsn);
 my $dbh_addr = refaddr $conn->dbh;
 isa_ok($conn, $CLASS);
 throws_ok {
