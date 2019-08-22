@@ -13,3 +13,5 @@ __END__
 
 # This module started as an attempt to prevent excessive PING operations
 # on the database. Unfortunately, this didn't work as expected.
+
+=head1 NO POD
