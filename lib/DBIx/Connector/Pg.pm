@@ -7,52 +7,11 @@ use parent 'DBIx::Connector';
 
 our $VERSION = '0.001';
 
-sub connected {
-    my $self = shift;
-    return unless $self->_seems_connected;
-    my $dbh = $self->{_dbh} or return;
-    $dbh->state and $dbh->state =~ /^08|^57(?!014)/ and return;
-    return 1;
-}
-
-=head1 NAME
-
-DBIx::Connector::Pg - DBIx::Connector subclass to check connection error instead of ping
-
-=head1 SYNOPSIS
-
-    use DBIx::Connector::Pg;
-    my $instance = DBIx::Connector::Pg->new;
-
-=head1 DESCRIPTION
-
-=cut
-
-=head1 METHODS
-
-=cut
-
 1;
 
-=head1 AUTHOR
+__END__
 
-Chylli <chylli@163.com>
+# This module started as an attempt to prevent excessive PING operations
+# on the database. Unfortunately, this didn't work as expected.
 
-=head1 COPYRIGHT AND LICENSE
-
-This software is copyright (c) 2017 by Chylli.
-
-This is free software; you can redistribute it and/or modify it under
-the same terms as the Perl 5 programming language system itself.
-
-
-=head1 SEE ALSO
-
-L<DBIx::Connector>
-
-=over 4
-
-=item *
-
-=back
-
+=head1 NO POD
